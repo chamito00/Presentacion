@@ -1,298 +1,330 @@
-# Plan: Agente de Ventas de Seguros con IA (operador solo)
+# Plan: Motor de agentes de venta con IA (multi-vertical)
 
-> Reanálisis desde cero del sistema descrito en el transcript, adaptado a un
-> solo operador en el sector asegurador. Lo que sigue no es "lo mismo pero
-> con seguros": es una re-arquitectura pensada para que una persona lo
-> pueda construir, mantener y rentabilizar.
+> Un solo motor de agentes, varios negocios encima. Primer vertical:
+> **seguros**. Desde el día 1 quedan definidas las bases de **trading** y
+> **Preparatoria CROC** para activarlas sin reescribir código.
+>
+> Reanálisis desde cero del sistema descrito en el transcript, adaptado a
+> un solo operador.
 
 ---
 
 ## 1. Diagnóstico del transcript (qué sirve y qué no)
 
-El sistema que Chava describe (Paperclip + Obsidian + Supabase + Deep Infra
-+ ElevenLabs + Hermes + MCPs) está diseñado para un **holding con varias
-divisiones y call center humano**. Trae decisiones que para un solo
-operador son sobre-ingeniería:
+El sistema del transcript (Paperclip + Obsidian + Supabase + Deep Infra +
+ElevenLabs + Hermes + MCPs) está diseñado para un **holding con varias
+divisiones y un call center humano**. Para un solo operador trae
+sobre-ingeniería, pero tiene una idea que vale oro y que aquí se vuelve el
+centro del diseño: **construir el motor una vez y clonarlo por negocio**.
 
 | Componente / idea | ¿Sirve solo? | Nota |
 |---|---|---|
-| Agentes especialistas por división | Parcial | Tú no tienes 5 divisiones. Tienes **ramos** de seguro (auto, vida, GMM, hogar, empresa). Mismo patrón, pero más chico. |
-| CFO + Router (Deep Infra) | Sí | Clave para no quebrar en tokens. Lo mantengo. |
+| Agentes especialistas por división | Sí, adaptado | Aquí son **verticales** (seguros, trading, prepa) y dentro de cada uno, sub-productos (ramo de seguro, tipo de cuenta, modalidad). |
+| CFO + Router de modelos | Sí | Clave para no quebrar en tokens. Presupuesto **por vertical**. |
 | Supabase vectorial | Sí | Memoria. No negociable. |
-| Obsidian como "cerebro visual" | **No** | Es útil para humanos que diseñan. No se necesita en producción. Opcional, personal. |
-| Paperclip | Opcional | Útil para prototipar. Puede migrar a código propio en LangGraph / Pydantic AI más adelante. |
-| ElevenLabs (voz) | Sí, pero no al inicio | Solo cuando ya tengas un flujo que convierta por texto. |
-| Avatar en video (clon) | Sí, en Fase 3 | En seguros el video del asesor genera confianza — es diferencial. |
-| 120 agentes diarios | **No** | Chava corre 120 porque es trading automatizado. Tú con 4–6 agentes bien hechos ganas. |
-| Hermes (self-learning) | Sí, en Fase 4 | Después de que tengas suficiente volumen (>200 llamadas / mes) para que valga la pena. |
-| Call center humano | **No aplica** | En tu caso **tú eres el único cerrador** al inicio, o le pasas al broker/aseguradora. |
-| Llamada en <2 min post-registro | Sí | Es la regla de oro de ventas que sí sobrevive. |
-| MCPs con ChatGPT/Claude para que te encuentren | Sí | AEO (Answer Engine Optimization) es el nuevo SEO. |
+| Obsidian | **No** | Útil para diseñar, no se necesita en producción. Opcional y personal. |
+| Paperclip | Opcional | Útil para prototipar; el motor se construye en código propio. |
+| Voz (ElevenLabs) | Sí, Fase 3 | Primero que convierta por texto. |
+| Avatar en video | Sí, Fase 3 | Uno distinto por vertical. |
+| 120 agentes | **No** | 7 agentes genéricos bien hechos, parametrizados por vertical. |
+| Aprendizaje por feedback (Hermes) | Sí, Fase 4 | Cuando haya volumen. Y aprende **entre** verticales. |
+| Llamada en <2 min post-registro | Sí | Regla de oro de ventas, en cualquier vertical. |
+| Aparecer en ChatGPT/Claude (AEO) | Sí | El nuevo SEO. |
+| "El que se escriba el manual mientras se construye" | Sí | Agente `Scribe`. |
 
-### Lo que el transcript **NO** cubre y es crítico en seguros
+### Lo que el transcript NO cubre y es crítico
 
-1. **Cumplimiento regulatorio (CNSF en México, o equivalente local).** No puedes
-   dar "asesoría" sin cédula. El agente IA puede educar, pre-calificar y
-   agendar — **no cotizar vinculante ni emitir pólizas sin un humano con cédula
-   atrás.** Esto cambia el diseño.
-2. **Pre-calificación por riesgo**, no solo por interés. En trading todo el
-   mundo puede abrir cuenta; en seguros una aseguradora puede rechazar al
-   prospecto. Hay que filtrar antes de gastar tiempo.
-3. **Ciclos largos** (semanas, no horas). La automatización de *nurture* es
-   más importante que la del primer contacto.
-4. **Confianza > velocidad.** Un bot que "cierra" en seguros espanta. Un
-   bot que *educa, agenda y acompaña* convierte.
-5. **Renovaciones y cross-sell anual.** El dinero real está en el *lifetime
-   value*, no en la venta inicial.
+1. **Cumplimiento regulatorio distinto por vertical.** Seguros (CNSF),
+   trading (CNBV y el regulador del broker), educación (SEP / PROFECO).
+   El bot puede educar, pre-calificar y agendar; **el cierre siempre lo
+   hace un humano autorizado**.
+2. **Pre-calificación con descarte responsable.** No todo prospecto debe
+   avanzar: alguien que invertiría dinero prestado, o que no tiene
+   certificado de secundaria, necesita otra salida, no un cierre.
+3. **Ciclos largos y por temporada** (renovaciones, periodos de
+   inscripción). El *nurture* importa más que el primer contacto.
+4. **Confianza > velocidad.** Un bot que educa y acompaña convierte; uno
+   que presiona espanta.
+5. **El dinero real es recurrente**: renovaciones, comisión por volumen,
+   reinscripciones.
 
 ---
 
-## 2. Decisiones de arquitectura (versión 1 operable por una persona)
+## 2. La idea central: un motor, N verticales
 
-### 2.1 Elige UN ramo para empezar
+**Regla de oro: el código del motor no sabe qué vende.** Todo lo que
+depende del negocio vive en `verticales/<id>/vertical.yaml`.
 
-Es el error #1 de los que arrancan. No construyas "el agente de seguros",
-construye **"el agente de GMM para familias de clase media en CDMX"**, o
-"el agente de seguro de auto para flotillas pyme". Nicho estrecho =
-knowledge base manejable, prospectos reconocibles, cierre más rápido.
+**Prueba de que la base está bien hecha:** activar un vertical nuevo =
+copiar `verticales/_plantilla/`, llenarla, y cero cambios en el código
+del motor. Si para el segundo vertical hay que tocar el motor, se corrige
+el motor (se generaliza), nunca se parcha con un `if vertical == ...`.
 
-**Recomendación:** empieza por **un ramo donde ya tengas red o experiencia
-propia**. Si no la tienes, el ramo de más baja fricción para empezar es
-**auto** (producto estandarizado, mucha demanda, comparadores públicos,
-ciclo corto). Vida y GMM pagan más pero exigen más confianza.
+### 2.1 Qué es común y qué cambia
 
-### 2.2 Stack mínimo viable
+| Pieza | Motor (común, código) | Vertical (config YAML) |
+|---|---|---|
+| Agentes | Lógica, memoria, herramientas | Nombre, tono, presentación |
+| Base de datos | Mismas tablas con `vertical_id` | — |
+| Calificación | Motor de scoring | Preguntas, pesos, descartes, redirecciones |
+| Cumplimiento | Guardrail que revisa cada mensaje saliente | "Nunca decir", disclaimer, quién cierra, consentimientos |
+| Contacto | Scheduler por zona horaria del prospecto | Ventana, días, canal, cadencia |
+| Conocimiento | Ingesta, embeddings, búsqueda | Fuentes y búsquedas de YouTube |
+| Acompañamiento | Motor de eventos sobre clientes | Eventos (renovación, inactividad, reinscripción…) |
+| Contenido | Generador y publicador | Redes, pilares, avatar |
+| Costos | Router + tope diario | Presupuesto diario |
+| KPIs | Dashboard | Metas |
+
+### 2.2 Los tres verticales lado a lado
+
+| | Seguros | Trading | Preparatoria CROC |
+|---|---|---|---|
+| Qué se vende | Pólizas (ramo inicial por definir; auto recomendado) | Apertura de cuenta con broker aliado (modelo referidor / IB) + formación | Inscripción a bachillerato |
+| Quién compra | Particular o pyme | Adulto 20–35 con capital de riesgo | Adulto que no terminó la prepa, o padre/madre de adolescente |
+| Dolor que abre la conversación | "Si choco o me enfermo, ¿quién paga?" | "Mi dinero no crece y no sé por dónde empezar" | "Sin certificado no me ascienden" |
+| Regla dura | Cédula CNSF para cerrar | Prohibido prometer rendimientos o recomendar operaciones (asesoría regulada) | RVOE vigente; datos de menores con tutor |
+| Quién cierra | Agente con cédula (tú o broker) | Ejecutivo del broker o tú como referidor | Asesor educativo / control escolar |
+| Ciclo de venta | 1–4 semanas | Días | 1–6 semanas, por temporada de inscripción |
+| Dinero recurrente | Renovación anual + otros ramos | Comisión por volumen operado | Colegiaturas + reinscripción |
+| El acompañante vigila | Vencimientos, eventos de vida, siniestros | Inactividad, pérdidas fuertes, retiros | Asistencia, pagos, reinscripción, deserción |
+| Línea roja ética | Vender cobertura que no aplica | Incitar a depositar tras pérdidas o con dinero prestado | Falsa urgencia ("últimos lugares"), prometer certificado rápido |
+
+Configuración completa de cada uno: `verticales/seguros/`,
+`verticales/trading/`, `verticales/preparatoria-croc/`. Todo lo marcado
+`POR CONFIRMAR` hay que llenarlo antes de pasar de `borrador` a `piloto`.
+
+### 2.3 Reglas de separación entre verticales
+
+- **Una marca, un número de WhatsApp y una voz/avatar por vertical.** Un
+  prospecto de la prepa jamás recibe un mensaje de trading.
+- **Datos aislados** por `vertical_id` + Row Level Security. Cross-sell
+  entre verticales solo con consentimiento explícito del cliente.
+- **Presupuesto de IA por vertical**: si trading se come su tope, no
+  apaga a seguros.
+- **El agente siempre se presenta como asistente virtual**, en todos los
+  verticales.
+- **Si un vertical es de un tercero** (p. ej. la prepa es tu cliente y no
+  tu negocio), el mismo motor se despliega en una instancia separada con
+  su propia base de datos. Por eso nada de negocio va en el código.
+
+### 2.4 Orden de lanzamiento: bases juntas, lanzamientos uno a la vez
+
+Las bases de los tres se hacen ya. Los lanzamientos van escalonados:
+
+1. **Seguros** (semanas 2–5): valida el motor.
+2. **Segundo vertical** (semanas 6–9): valida la plantilla.
+3. **Tercer vertical** (semanas 10–13).
+
+¿Cuál va segundo? **El que tenga la fecha más cercana.** Si el próximo
+periodo de inscripción de la prepa cae en los próximos 2–3 meses, la prepa
+va segunda; si no, trading.
+
+¿Por qué no los tres en piloto al mismo tiempo? Tres fuentes de bugs, tres
+marcos regulatorios y tú solo para cerrar. Cada lanzamiento además
+mejora el motor para el siguiente.
+
+---
+
+## 3. Stack y costos
 
 | Capa | Herramienta | Costo mensual estimado |
 |---|---|---|
-| Agentes / orquestación | **Pydantic AI** o **LangGraph** en Python (código tuyo, no Paperclip) | $0 |
-| LLM router | **OpenRouter** (equivalente moderno a Deep Infra, 300+ modelos) | pay-per-use, ~$20–50 USD |
-| Base de datos vectorial | **Supabase** (pgvector) | $0–25 USD |
+| Agentes / orquestación | **Pydantic AI** o **LangGraph** en Python (código propio) | $0 |
+| Router de modelos | **OpenRouter** (cientos de modelos, una sola API) | pay-per-use, ~$20–50 USD |
+| Base de datos vectorial | **Supabase** (Postgres + pgvector) | $0–25 USD |
 | Scraping / transcripción | **Apify** o **Firecrawl** | ~$15 USD |
-| Hosting | **Railway** o **Fly.io** (1 VPS chico + staging) | ~$10–20 USD |
-| Voz (Fase 3) | **ElevenLabs** o **Cartesia** | ~$22 USD |
+| Hosting | **Railway** o **Fly.io** (staging + producción) | ~$10–20 USD |
 | WhatsApp Business API | **Twilio** o **WATI** | ~$30 USD + mensajes |
+| Agenda | **Cal.com** | $0 |
+| Voz (Fase 3) | **ElevenLabs** o **Cartesia** | ~$22 USD |
 | Avatar video (Fase 3) | **HeyGen** o **Synthesia** | ~$30–90 USD |
 | Repositorio / CI | **GitHub** | $0 |
 
-**Costo mensual Fase 1 (sin voz ni avatar): ~$80–100 USD.**
-**Costo mensual Fase 3 completa: ~$200–250 USD.**
+- **Motor + seguros (Fase 1):** ~$80–100 USD/mes.
+- **Cada vertical adicional:** ~$40–80 USD/mes (número de WhatsApp y
+  mensajes, uso de LLM, avatar propio). No es tan barato como "10 dólares"
+  porque cada marca necesita su propio número y su propia cara.
+- **Tres verticales con voz y avatar:** ~$300–400 USD/mes.
 
-Está muy debajo de los $150 que gasta Chava en Trading Hearts porque tu
-volumen es menor. Cuando crezcas, escala.
+Son estimaciones; se confirman al dar de alta cada servicio.
 
-### 2.3 Dos ambientes desde el día 1
-
-- `staging` (donde pruebas cambios)
-- `production` (donde atiendes clientes reales)
-
-Chava tiene razón: no es caro y te salva de catástrofes. Mismo stack,
-proyecto duplicado en Supabase y Railway.
+**Dos ambientes desde el día 1:** `staging` (pruebas) y `production`
+(clientes reales). Mismo stack, proyectos duplicados.
 
 ---
 
-## 3. Los agentes que sí necesitas (7, no 15 — y solo 4 en Fase 1)
+## 4. Los agentes (7 genéricos + Scribe)
 
-Diseñados para que **cada uno haga una cosa bien** y se comuniquen entre
-sí vía la base vectorial (memoria compartida) y un orquestador.
+Cada agente es **código genérico** que lee su comportamiento del
+`vertical.yaml` del lead que está atendiendo. En Fase 1 solo corren 4.
 
-### 3.1 Orquestador (`Router`)
-Decide qué agente responde a cada mensaje entrante. También elige el
-modelo LLM óptimo (barato para clasificar, bueno para redactar, caro
-solo para razonar). Tiene un presupuesto diario tope (ej. $3 USD/día) y
-corta si se excede.
+| Agente | Qué hace | Lee del vertical | Fase |
+|---|---|---|---|
+| `Router` | Decide qué agente atiende y qué modelo LLM usar; corta si se excede el presupuesto | `presupuesto_ia_diario_usd` | 1 |
+| `Scout` | Enriquece al lead (fuentes públicas, IP → zona horaria) y escribe un brief de 10 líneas | `cliente_ideal`, `calificacion.descartar_si` | 1 |
+| `Greeter` | Primer contacto en <2 min dentro de horario. No vende: confirma identidad, pregunta el dolor, califica, agenda | `marca`, `contacto`, `calificacion` | 1 |
+| `Expert` | Uno por vertical. Lee sus fuentes a diario y mantiene el conocimiento al día en Supabase | `conocimiento` | 1 |
+| `Advisor` | Resuelve dudas con información citada de Supabase; siempre agrega el disclaimer y pasa al humano para cerrar | `cumplimiento` | 2 |
+| `Creator` | Publica contenido diario por vertical, para SEO y AEO | `contenido` | 2 |
+| `Shepherd` | Acompaña a clientes cerrados según los eventos del vertical | `acompanamiento` | 2 |
+| `Scribe` | Mantiene `OPERATIONS.md` al día leyendo commits, prompts y tablas | — | 1 |
 
-### 3.2 Investigador de prospecto (`Scout`)
-Al llegar un lead con nombre + teléfono + email, hace:
-- Enriquecimiento con fuentes públicas (LinkedIn público, Instagram público,
-  web de la empresa si aplica, Google).
-- Clasifica: particular / pyme, rango de edad probable, zona geográfica
-  (vía IP + código postal del formulario), señales de capacidad de pago.
-- Marca banderas rojas (ej. perfil inconsistente, bot, lead quemado).
-- Escribe un **brief de 10 líneas** en Supabase sobre el prospecto.
-
-### 3.3 Educador / Primer contacto (`Greeter`)
-WhatsApp o llamada corta (<2 min desde registro, respetando horario local).
-**No vende.** Hace tres cosas:
-1. Confirma que es la persona correcta.
-2. Pregunta *qué le preocupa* (dolor, no producto).
-3. Agenda una llamada corta con el humano (tú) o con el `Advisor` IA
-   según el valor del prospecto.
-
-### 3.4 Asesor (`Advisor`) — opcional en Fase 1
-Agente conversacional que explica coberturas, deducibles, exclusiones.
-**Siempre marca como "información general, no cotización vinculante"**
-y refiere al humano para emitir. En Fase 1 puedes saltarte esto y usar
-tu propio tiempo; en Fase 2 lo activas para escalar.
-
-### 3.5 Especialista por ramo (`Expert:Auto`, `Expert:GMM`, …)
-Es el que Chava llama "especialista por división". En seguros es
-**especialista por ramo**. Cada uno:
-- Lee diariamente fuentes de su ramo (CONDUSEF, AMIS, blogs de
-  aseguradoras, YouTube — ver método Apify del transcript).
-- Mantiene en Supabase un digest actualizado de productos, cambios
-  regulatorios, tasas, nuevas coberturas.
-- Es llamado por el `Advisor` cuando una pregunta cae en su dominio.
-
-**Empieza con UNO.** Agregas los demás cuando el primero convierte.
-
-### 3.6 Creador de contenido (`Creator`)
-- Publica diario en redes (LinkedIn, IG, TikTok).
-- Formatos: explicativos de 60 s, mitos vs. realidad, "qué pasa si…".
-- Fase 1: solo texto + imagen. Fase 3: video con tu avatar.
-- Objetivo doble: SEO humano **y AEO** (que ChatGPT/Claude te citen
-  cuando alguien pregunta "qué seguro me conviene"). Para AEO hay que
-  publicar en fuentes que esos modelos rastreen (tu propio sitio con
-  schema.org, Medium, Reddit, Quora).
-
-### 3.7 Guardián del cliente (`Shepherd`) — Fase 2
-Para clientes **ya emitidos**:
-- Avisa de renovación 60 / 30 / 7 días antes.
-- Felicita cumpleaños, aniversario de póliza.
-- Detecta eventos de vida (vía redes: boda, hijo, mudanza, auto nuevo)
-  y dispara cross-sell suave.
-- Es el que *replica el truco de Chava*: "oye, vi que estás en Japón,
-  ten un buen viaje" → recuérdale que el GMM internacional existe.
+Por encima de todos corre el **guardrail de cumplimiento**: ningún
+mensaje sale sin pasar por la lista `cumplimiento.nunca_decir` del
+vertical. Si choca, el mensaje se bloquea, se registra y se escala al
+humano.
 
 ---
 
-## 4. Flujo end-to-end (ejemplo auto)
+## 5. Flujo end-to-end (igual para todos los verticales)
 
 ```
-[Anuncio Meta / Google / orgánico]
+[Anuncio / orgánico / referido]  →  landing de la marca del vertical
         ↓
-[Landing page con formulario corto]
+[Webhook con vertical_id]  →  Scout: enriquecimiento + brief (20 s)
         ↓
-[Webhook → Scout]  ← enriquecimiento en 20 s
+[Router: ¿dentro de la ventana horaria del vertical y del prospecto?]
+     ├── Sí → Greeter contacta en <2 min
+     └── No → se programa para el inicio de la siguiente ventana
         ↓
-[Router evalúa: ¿horario? ¿calidad? ¿canal preferente?]
+[Greeter califica con las preguntas del vertical]
+     ├── Puntaje ≥ mínimo → agenda con el humano que cierra
+     ├── Cae en "redirigir_si" → salida útil (INEA, contenido gratis…)
+     ├── Cae en "descartar_si" → se descarta con amabilidad
+     └── No contesta → cadencia de seguimiento del vertical
         ↓
-[Greeter manda WhatsApp]  (o llama si opt-in)
+[Cierre humano: póliza / cuenta / inscripción]
         ↓
-     ¿contesta?
-     ├── Sí → qualifica dolor → agenda llamada
-     └── No → secuencia nurture (3 toques en 7 días)
-        ↓
-[Llamada: humano o Advisor según valor]
-        ↓
-[Cotización emitida por humano con cédula]
-        ↓
-[Shepherd toma al cliente] → renovaciones y cross-sell
+[Shepherd: eventos del vertical]  →  renovación, reinscripción, referidos
 ```
 
-Todo esto registrado en el CRM (que, siguiendo el consejo de Chava, es
-código tuyo generado con Claude, no una suscripción externa — pero
-honestamente, para empezar **HubSpot gratis** o **Attio** te resuelve en
-una tarde y luego migras).
+Todo queda en Supabase (`db/schema.sql`), que funciona como CRM mínimo
+desde la Fase 1.
 
 ---
 
-## 5. Plan de trabajo por fases
+## 6. Plan de trabajo por fases
 
 ### Fase 0 — Preparación (semana 1)
-- [ ] Elegir ramo inicial y perfil de cliente ideal (1 página escrita).
-- [ ] Dar de alta: Supabase, OpenRouter, GitHub, Railway, Apify, Twilio.
-- [ ] Si no la tienes: tramitar cédula de agente ante CNSF (o equivalente),
-      o firmar convenio con un broker/MGA que te permita operar bajo su
-      figura. **Sin esto nada vende.**
-- [ ] Comprar dominio + hosting del landing.
+- [ ] Llenar los `POR CONFIRMAR` de `verticales/seguros/vertical.yaml`.
+- [ ] Seguros: cédula de agente ante la CNSF, o convenio con un broker
+      que te permita operar bajo su figura.
+- [ ] Trading: convenio de referidor (IB) con un broker regulado;
+      verificar que pueda captar clientes en México y qué puede decir un
+      referidor.
+- [ ] Preparatoria CROC: confirmar si vendes como promotor o la escuela
+      es tu cliente; RVOE, planteles, modalidades, costos, fechas de
+      inscripción y permiso de uso de marca.
+- [ ] Dar de alta Supabase, OpenRouter, Railway, Apify y proveedor de
+      WhatsApp.
+- [ ] Aplicar `db/schema.sql` en staging.
 
-### Fase 1 — MVP operable (semanas 2–5)
-- [ ] Esquema de Supabase: `leads`, `interactions`, `knowledge`,
-      `clients`, `policies`.
-- [ ] Router + Scout + Greeter + 1 Expert (del ramo elegido).
-- [ ] Landing page con formulario → webhook.
-- [ ] Integración WhatsApp Business.
-- [ ] Flujo de agenda (Cal.com, gratis).
-- [ ] CRM mínimo (HubSpot free o uno propio en Supabase).
-- [ ] Ambiente staging + production separados.
-- **Meta de la fase:** 10 leads reales procesados, 3 cotizaciones
-  emitidas por el humano, 1 póliza cerrada.
+### Fase 1 — Motor + seguros (semanas 2–5)
+- [ ] Cargador de verticales: lee `verticales/*/vertical.yaml`, valida
+      los campos obligatorios contra la plantilla y se niega a activar un
+      vertical en `piloto` que tenga `POR CONFIRMAR`.
+- [ ] Router, Scout, Greeter y Expert, todos parametrizados por vertical.
+- [ ] Guardrail de cumplimiento sobre cada mensaje saliente.
+- [ ] Scheduler de contacto por zona horaria con cola fuera de horario.
+- [ ] Landing + webhook + WhatsApp + Cal.com para seguros.
+- [ ] Scribe generando `OPERATIONS.md`.
+- **Meta:** 10 leads reales, 3 cotizaciones, 1 póliza. Y ninguna mención
+  a "seguro" en el código del motor fuera de `verticales/seguros/`.
 
-### Fase 2 — Contenido y presencia (semanas 6–9)
-- [ ] Creator posteando 1×/día en 2 redes.
-- [ ] 20 artículos SEO/AEO en el sitio (lo producen Expert + Creator).
-- [ ] Advisor activado para conversaciones calificadas.
-- [ ] Shepherd corriendo sobre los primeros clientes.
-- **Meta:** 50 leads/mes orgánicos + 20 pagados, 5 pólizas/mes.
+### Fase 2 — Segundo vertical + contenido (semanas 6–9)
+- [ ] Activar el segundo vertical **solo** con su config, landing y
+      número de WhatsApp. Cualquier cambio de motor que haga falta se
+      documenta como deuda de la plantilla y se generaliza.
+- [ ] Advisor y Shepherd activos en seguros y en el segundo vertical.
+- [ ] Creator publicando por vertical.
+- [ ] Dashboard de KPIs filtrable por vertical.
+- **Meta:** segundo vertical procesando leads reales sin cambios al motor.
 
-### Fase 3 — Avatar y voz (semanas 10–13)
-- [ ] Clonar tu voz (ElevenLabs).
-- [ ] Avatar en video (HeyGen) para contenido corto.
-- [ ] Opción de llamada por voz con `Greeter` (no obligatoria,
-      canal secundario — el principal sigue siendo WhatsApp).
-- [ ] Segundo Expert (segundo ramo).
-- **Meta:** 15 pólizas/mes, LTV calculado y accionable.
+### Fase 3 — Tercer vertical, voz y avatar (semanas 10–13)
+- [ ] Activar el tercer vertical.
+- [ ] Voz y avatar distintos por vertical (perfil joven para trading,
+      asesor educativo cercano para la prepa, perfil confiable para
+      seguros).
+- [ ] Llamada por voz como canal secundario; WhatsApp sigue siendo el
+      principal.
+- **Meta:** tres verticales operando, costo por cierre medido en cada uno.
 
 ### Fase 4 — Aprendizaje y escala (mes 4 en adelante)
-- [ ] Hermes-style feedback loop: cada interacción se puntúa, los
-      agentes se re-entrenan con los ejemplos ganadores.
-- [ ] Tercer y cuarto Expert.
-- [ ] Dashboard de KPIs: CPL, CPQ, CPA, close rate, LTV, retención.
-- [ ] Variantes del avatar para distintos segmentos (joven vs. adulto
-      mayor; particular vs. empresa) — el truco de Chava de los
-      "personajes".
+- [ ] Feedback loop: cada interacción se califica y los guiones
+      ganadores alimentan a los agentes.
+- [ ] **Aprendizaje cruzado:** lo que el Greeter de seguros aprende sobre
+      cómo abrir una conversación mejora al de la prepa y al de trading.
+      Ese es el verdadero valor del motor común.
+- [ ] Nuevos sub-productos (otros ramos, otras modalidades) y nuevos
+      verticales = nuevas carpetas.
 
 ---
 
-## 6. KPIs mínimos a instrumentar desde Fase 1
+## 7. KPIs (por vertical, desde la Fase 1)
 
-- **Tiempo registro → primer contacto** (meta: <2 min en horario, <10 min
-  cola fuera de horario).
-- **Tasa de respuesta WhatsApp** (meta: >40%).
-- **Tasa de calificación** (leads que pasan a cotización / total).
-- **Costo por lead y por póliza** (CPL, CPA).
-- **Close rate del humano** por fuente.
-- **Costo IA diario** (que el CFO del router corte si supera presupuesto).
-- **NPS post-emisión** y renovación año 1.
+Comunes:
+- Tiempo registro → primer contacto (meta: <2 min en horario).
+- Tasa de respuesta en WhatsApp (meta: >40%).
+- Tasa de calificación (agendados / leads).
+- Costo por lead (CPL) y por cierre (CPA).
+- Costo de IA diario contra presupuesto.
+- Mensajes bloqueados por el guardrail (debe tender a cero).
+
+Propios de cada vertical (metas iniciales en cada `vertical.yaml`):
+- Seguros: cotizaciones, pólizas, renovación año 1.
+- Trading: cuentas abiertas, cuentas fondeadas, clientes activos a 90 días.
+- Prepa: citas, inscripciones, retención por periodo.
 
 ---
 
-## 7. Riesgos y mitigaciones
+## 8. Riesgos y mitigaciones
 
 | Riesgo | Mitigación |
 |---|---|
-| CNSF o aseguradora detecta que un bot "asesora" | Guardrails en el prompt + disclaimer en cada mensaje + humano con cédula en el cierre. |
-| Alucinación del Advisor sobre coberturas | Retrieval obligado desde Supabase, no se permite respuesta sin cita. Logs auditables. |
-| Fuga de datos personales (PII) | Supabase con RLS, cifrado en reposo, nada de PII a modelos externos sin anonimizar. |
-| Dependencia de un solo proveedor LLM | OpenRouter como abstracción — exactamente el argumento "agnóstico" de Chava. |
-| Reputación por mensaje a horas inadecuadas | Scheduler con zona horaria del lead + ventana de contacto configurable. |
-| Que te quemes manteniéndolo solo | Documenta todo en el repo + un agente `Scribe` que escriba el manual mientras se construye (ver siguiente punto). |
+| Un regulador detecta que un bot "asesora" o cierra | Guardrail + disclaimer + humano autorizado en el cierre, en los tres verticales. |
+| Trading: promesa de rendimientos o clientes vulnerables | Descarte por dinero prestado o fondo de emergencia; prohibido sugerir depósitos tras pérdidas; retiros siempre al humano. |
+| Prepa: datos de menores | Contacto con madre, padre o tutor; consentimiento registrado en `leads.consentimientos`. |
+| Prepa: uso de la marca CROC sin autorización | Confirmar el permiso antes de publicar cualquier anuncio. |
+| Alucinación sobre coberturas, planes o condiciones | El Advisor solo responde con información citada de Supabase; logs auditables. |
+| Fuga de datos personales | RLS en todas las tablas, cifrado en reposo, nada de datos personales a modelos externos sin anonimizar. |
+| Mezcla de verticales | `vertical_id` obligatorio en cada tabla; marcas y números separados. |
+| Dependencia de un proveedor LLM | OpenRouter como capa intermedia. |
+| Te quemas manteniéndolo solo | Lanzamientos escalonados + Scribe + `OPERATIONS.md`. |
 
 ---
 
-## 8. El agente `Scribe` (el consejo bueno que sí roba al transcript)
+## 9. Qué construir esta semana
 
-La idea de "mientras lo construyes, que se escriba el manual" es oro
-para un operador solo. `Scribe`, un octavo agente ligero, observa commits de GitHub, cambios de prompts, nuevas tablas
-en Supabase, y mantiene actualizado un `OPERATIONS.md` con "cómo está
-armado esto hoy". Si te atropella un camión mañana, quien tome tu laptop
-puede continuar leyendo ese archivo.
-
----
-
-## 9. Qué construir **esta semana** (si empiezas hoy)
-
-1. Escribe en una hoja: **ramo, segmento, propuesta de valor en 1 frase**.
-2. Da de alta Supabase y crea las 5 tablas base.
-3. Clona este repo, agrega un `src/` con Pydantic AI y un primer agente
-   `scout.py` que recibe un JSON de lead y devuelve un brief.
-4. Compra el dominio y arma un landing de una sola página con formulario.
-5. Deja el acceso a OpenRouter listo con límite de gasto diario.
-
-Con eso ya puedes procesar el primer lead real. El resto crece encima.
+1. Llenar los `POR CONFIRMAR` del vertical de seguros.
+2. Crear el proyecto de Supabase de staging y aplicar `db/schema.sql`.
+3. Agregar `src/` con Pydantic AI y un primer agente `scout.py` que
+   reciba un JSON de lead más su `vertical.yaml` y devuelva un brief.
+4. Comprar el dominio de la marca de seguros y armar un landing de una
+   página con formulario.
+5. Dejar OpenRouter con límite de gasto diario.
 
 ---
 
-## 10. Lo que NO voy a copiar del transcript (y por qué)
+## 10. Lo que no copio del transcript (y por qué)
 
-- **No** 15 agentes el día 1. Un sistema de 15 agentes que una sola
-  persona mantiene es un sistema que en 3 meses nadie entiende, ni tú.
-- **No** avatar en Fase 1. Grabas la cara real tuya en 10 videos cortos
-  y conviertes mejor que cualquier clon mientras no tengas volumen.
-- **No** WhiteLabel contratado a un tercero. Chava le vende a Jorge un
-  white label porque Jorge tiene presupuesto y prisa; tú tienes tiempo
-  y necesitas entender cada pieza. Constrúyelo tú (con Claude Code al
-  lado) — en 10 semanas lo tienes, en el camino aprendes el negocio.
-- **No** llamada automatizada por voz como canal principal. En seguros
-  en LATAM, WhatsApp convierte más y asusta menos. Voz es Fase 3.
+- **No 15 agentes el día 1.** Un sistema que una persona no puede
+  explicar en una hoja no lo puede mantener.
+- **No avatar en Fase 1.** 10 videos cortos con tu cara real convierten
+  mejor que un clon mientras no haya volumen.
+- **No white label de un tercero.** Construirlo tú (con Claude Code al
+  lado) te hace dueño de cada pieza y del aprendizaje del negocio.
+- **No llamada automatizada como canal principal.** En LATAM, WhatsApp
+  convierte más y asusta menos.
+
+---
+
+## Archivos de este repo
+
+| Archivo | Para qué |
+|---|---|
+| `PLAN.md` | Este plan |
+| `db/schema.sql` | Esquema de Supabase multi-vertical (tablas, índices, RLS) |
+| `verticales/_plantilla/vertical.yaml` | Plantilla comentada para crear un vertical nuevo |
+| `verticales/seguros/vertical.yaml` | Borrador del vertical de seguros |
+| `verticales/trading/vertical.yaml` | Borrador del vertical de trading |
+| `verticales/preparatoria-croc/vertical.yaml` | Borrador del vertical de Preparatoria CROC |

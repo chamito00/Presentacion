@@ -1,0 +1,70 @@
+# Plantilla de vertical.
+# Para crear uno nuevo: copia esta carpeta a verticales/<id>/ y llena cada campo.
+# Activar un vertical no debe requerir cambios en el código del motor.
+# Un vertical con algún "POR CONFIRMAR" no puede pasar de borrador a piloto.
+
+id: ejemplo                     # igual al nombre de la carpeta y a verticales.id en la base
+nombre: Ejemplo
+estado: borrador                # borrador | piloto | activa
+pais: MX
+idioma: es-MX
+zona_horaria_default: America/Mexico_City   # si no se puede inferir la del prospecto
+presupuesto_ia_diario_usd: 3
+
+marca:
+  nombre_comercial: POR CONFIRMAR
+  nombre_agente: POR CONFIRMAR  # siempre se presenta como asistente virtual
+  tono: ""
+  presentacion: ""              # una frase: quién eres y para qué escribes
+
+producto:
+  que_se_vende: ""
+  ticket_promedio_mxn: null
+  ciclo_venta_dias: null
+  ingreso_recurrente: ""        # de dónde sale el dinero después de la primera venta
+
+cliente_ideal:
+  - segmento: ""
+    dolor: ""                   # lo que abre la conversación; nunca el producto
+
+calificacion:
+  puntaje_minimo_para_agendar: 60
+  preguntas:                    # la suma de pesos debe ser 100
+    - id: ""
+      texto: ""
+      peso: 0
+  descartar_si: []              # se cierra la conversación con amabilidad
+  redirigir_si: []              # no es para ti, pero merece una salida útil
+
+cumplimiento:
+  reguladores: []
+  quien_cierra: ""              # el agente IA nunca cierra
+  disclaimer: ""                # se agrega a todo mensaje que informe sobre el producto
+  nunca_decir: []               # el guardrail bloquea y escala cualquier mensaje que lo haga
+  datos_sensibles: []
+  consentimientos: []
+
+contacto:
+  canal_principal: whatsapp     # whatsapp | llamada | email
+  ventana_horaria: {inicio: "09:00", fin: "20:30"}   # hora local del prospecto
+  dias: [lun, mar, mie, jue, vie, sab]
+  primer_contacto_max_minutos: 2
+  cadencia_seguimiento_dias: [0, 2, 7]
+  max_intentos: 3
+
+conocimiento:
+  fuentes: []                   # {nombre, tipo: web|youtube|pdf|rss, frecuencia: diaria|semanal|al cambiar}
+  busquedas_youtube: []
+
+acompanamiento:                 # eventos que dispara el Shepherd sobre clientes cerrados
+  - evento: ""
+    disparador: ""
+    accion: ""
+
+contenido:
+  redes: []
+  pilares: []
+  avatar: POR CONFIRMAR
+
+kpis:
+  metas_mensuales: {}           # metas iniciales; ajustar con los datos del primer mes

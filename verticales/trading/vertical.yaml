@@ -1,0 +1,116 @@
+id: trading
+nombre: Trading
+estado: borrador
+pais: MX
+idioma: es-MX
+zona_horaria_default: America/Mexico_City
+presupuesto_ia_diario_usd: 3
+
+marca:
+  nombre_comercial: POR CONFIRMAR
+  nombre_agente: POR CONFIRMAR
+  tono: Joven, directo y educativo. Habla de aprender y de gestionar el riesgo, nunca de hacerse rico.
+  presentacion: Soy el asistente virtual de [marca]. Te ayudo a dar tus primeros pasos en los mercados y te conecto con un asesor.
+
+producto:
+  que_se_vende: Apertura de cuenta de trading con un broker aliado (modelo referidor / IB) más formación.
+  ticket_promedio_mxn: null     # POR CONFIRMAR: depósito mínimo del broker aliado
+  ciclo_venta_dias: 5
+  ingreso_recurrente: Comisión por volumen operado por los clientes referidos mientras sigan activos.
+
+cliente_ideal:
+  - segmento: Adulto de 20 a 35 años con ingreso estable que quiere aprender a invertir
+    dolor: Mi dinero no crece en el banco y no sé por dónde empezar.
+  - segmento: Persona con experiencia básica que busca método y acompañamiento
+    dolor: Opero solo, sin método, y quiero educación y soporte.
+
+calificacion:
+  puntaje_minimo_para_agendar: 65
+  preguntas:
+    - id: experiencia
+      texto: ¿Has invertido o hecho trading antes?
+      peso: 20
+    - id: objetivo
+      texto: ¿Qué te gustaría lograr invirtiendo?
+      peso: 20
+    - id: capital_riesgo
+      texto: ¿Tienes un monto que podrías destinar sin afectar tus gastos ni tu fondo de emergencia?
+      peso: 30
+    - id: tiempo
+      texto: ¿Cuánto tiempo a la semana puedes dedicarle a aprender?
+      peso: 15
+    - id: expectativa
+      texto: ¿Qué rendimiento esperas?
+      peso: 15
+  descartar_si:
+    - Es menor de edad.
+    - El dinero sería prestado, de una tarjeta de crédito o de su fondo de emergencia.
+    - Espera rendimientos garantizados o "duplicar" su dinero.
+  redirigir_si:
+    - No tiene capital de riesgo hoy → invitar a contenido educativo gratuito y recontactar en 90 días.
+
+cumplimiento:
+  reguladores: [CNBV, regulador del broker aliado]
+  quien_cierra: Ejecutivo del broker aliado, o tú como referidor con el guion aprobado por el broker.
+  disclaimer: Invertir en mercados financieros implica riesgo de perder parte o la totalidad del capital. Los resultados pasados no garantizan resultados futuros. Esto es información educativa, no una recomendación de inversión.
+  nunca_decir:
+    - Prometer o insinuar rendimientos.
+    - Recomendar comprar o vender un instrumento específico (eso es asesoría de inversión regulada).
+    - Sugerir depositar más después de una pérdida.
+    - Desanimar o retrasar una solicitud de retiro.
+    - Usar ganancias de otros clientes como ejemplo de lo que el prospecto va a ganar.
+  datos_sensibles: [situación financiera, ingresos, actividad de la cuenta de trading]
+  consentimientos:
+    - Aviso de privacidad aceptado en el formulario.
+    - Autorización expresa para que el broker comparta la actividad de la cuenta con el referidor.
+    - Consentimiento para revisar redes sociales públicas (lo usa el Shepherd).
+
+contacto:
+  canal_principal: whatsapp
+  ventana_horaria: {inicio: "09:00", fin: "21:00"}
+  dias: [lun, mar, mie, jue, vie, sab]
+  primer_contacto_max_minutos: 2
+  cadencia_seguimiento_dias: [0, 1, 4]
+  max_intentos: 3
+
+conocimiento:
+  fuentes:
+    - {nombre: Calendario económico (tasas, empleo, inflación), tipo: web, frecuencia: diaria}
+    - {nombre: Banxico (decisiones de política monetaria), tipo: web, frecuencia: semanal}
+    - {nombre: Material educativo y condiciones del broker aliado, tipo: pdf, frecuencia: al cambiar}
+  busquedas_youtube:
+    - qué es el apalancamiento explicado fácil
+    - gestión de riesgo para principiantes
+    - cómo leer el calendario económico
+
+acompanamiento:
+  - evento: bienvenida
+    disparador: Cuenta fondeada
+    accion: Enviar ruta de aprendizaje de 4 semanas y acceso a webinars.
+  - evento: inactividad
+    disparador: 14 días sin operar
+    accion: Preguntar cómo va sin presionar a operar; si hay contexto (p. ej. viaje en redes públicas con consentimiento), adaptar el mensaje.
+  - evento: perdida_fuerte
+    disparador: Caída del balance mayor a 30% en un mes
+    accion: Mensaje sobre gestión de riesgo y oferta de sesión educativa. Nunca sugerir un depósito.
+  - evento: solicitud_retiro
+    disparador: El cliente pide retirar
+    accion: Pasar al humano para facilitar el trámite. El bot no intenta retener.
+  - evento: aniversario
+    disparador: Un año desde la apertura
+    accion: Resumen de su aprendizaje y propuesta del siguiente nivel de formación.
+
+contenido:
+  redes: [tiktok, instagram, youtube]
+  pilares:
+    - Qué pasó hoy en el mercado en 60 segundos
+    - Errores de principiante
+    - Gestión de riesgo
+  avatar: POR CONFIRMAR (personaje de 25 a 30 años; uno por idioma o país si se expande)
+
+kpis:
+  metas_mensuales:
+    leads: 150
+    cuentas_abiertas: 15
+    cuentas_fondeadas: 8
+    clientes_activos_90_dias: 0.50

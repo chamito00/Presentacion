@@ -1,0 +1,115 @@
+id: seguros
+nombre: Seguros
+estado: borrador
+pais: MX
+idioma: es-MX
+zona_horaria_default: America/Mexico_City
+presupuesto_ia_diario_usd: 3
+
+marca:
+  nombre_comercial: POR CONFIRMAR
+  nombre_agente: POR CONFIRMAR
+  tono: Cercano y claro, sin tecnicismos; explica con ejemplos de la vida diaria.
+  presentacion: Soy el asistente virtual de [marca]. Te ayudo a entender qué seguro te conviene y te conecto con un agente certificado.
+
+producto:
+  que_se_vende: "Pólizas de seguro. Ramo inicial: POR CONFIRMAR (recomendado: auto)."
+  ticket_promedio_mxn: null     # POR CONFIRMAR según el ramo
+  ciclo_venta_dias: 14
+  ingreso_recurrente: Comisión por renovación anual y venta de otros ramos al mismo cliente.
+
+cliente_ideal:
+  - segmento: Particular de 25 a 55 años con auto propio o financiado
+    dolor: "Si choco o me roban el auto, ¿cuánto me cuesta?"
+  - segmento: Pyme con 1 a 10 vehículos de trabajo
+    dolor: Un siniestro sin cobertura detiene la operación.
+  - segmento: Familia con hijos y sin gastos médicos mayores
+    dolor: Una hospitalización puede acabar con los ahorros.
+
+calificacion:
+  puntaje_minimo_para_agendar: 60
+  preguntas:
+    - id: necesidad
+      texto: ¿Qué te gustaría proteger?
+      peso: 30
+    - id: urgencia
+      texto: ¿Tienes alguna póliza que venza pronto o algo que necesites asegurar ya?
+      peso: 25
+    - id: cobertura_actual
+      texto: ¿Hoy tienes algún seguro? ¿Con quién?
+      peso: 15
+    - id: presupuesto
+      texto: ¿Más o menos cuánto te gustaría pagar al mes?
+      peso: 20
+    - id: decisor
+      texto: ¿La decisión la tomas tú o con alguien más?
+      peso: 10
+  descartar_si:
+    - Solo quiere el precio más bajo para comparar y no quiere hablar con un agente.
+    - Pide asegurar con datos falsos o un bien que no es suyo sin autorización.
+  redirigir_si:
+    - Tiene un siniestro en curso con otra aseguradora → orientarlo con su aseguradora y con CONDUSEF.
+
+cumplimiento:
+  reguladores: [CNSF, CONDUSEF]
+  quien_cierra: Agente con cédula vigente de la CNSF (tú o el broker con el que tengas convenio).
+  disclaimer: Información general, no es una cotización vinculante. Las condiciones finales las define la aseguradora en la póliza.
+  nunca_decir:
+    - Dar un precio como definitivo.
+    - Garantizar que la aseguradora va a aceptar al prospecto.
+    - Interpretar diagnósticos médicos o afirmar si una enfermedad preexistente está cubierta.
+    - Recomendar ocultar o modificar información en la solicitud.
+  datos_sensibles: [estado de salud, padecimientos, historial de siniestros]
+  consentimientos:
+    - Aviso de privacidad aceptado en el formulario.
+    - Consentimiento expreso y por escrito antes de pedir datos de salud.
+    - Consentimiento para revisar redes sociales públicas (lo usa el Shepherd).
+
+contacto:
+  canal_principal: whatsapp
+  ventana_horaria: {inicio: "09:00", fin: "20:30"}
+  dias: [lun, mar, mie, jue, vie, sab]
+  primer_contacto_max_minutos: 2
+  cadencia_seguimiento_dias: [0, 2, 7]
+  max_intentos: 3
+
+conocimiento:
+  fuentes:
+    - {nombre: CONDUSEF (comparativos y quejas por aseguradora), tipo: web, frecuencia: semanal}
+    - {nombre: AMIS (estadísticas del sector), tipo: web, frecuencia: semanal}
+    - {nombre: CNSF (disposiciones y circulares), tipo: web, frecuencia: semanal}
+    - {nombre: Condiciones generales de las aseguradoras con convenio, tipo: pdf, frecuencia: al cambiar}
+  busquedas_youtube:
+    - cómo funciona el deducible del seguro de auto en México
+    - qué cubre un seguro de gastos médicos mayores
+    - errores comunes al contratar un seguro
+
+acompanamiento:
+  - evento: renovacion
+    disparador: 60, 30 y 7 días antes de contratos.vencimiento
+    accion: Recordar, preguntar si algo cambió (auto nuevo, domicilio) y agendar con el agente.
+  - evento: aniversario_poliza
+    disparador: Cada año en contratos.inicio
+    accion: Agradecer y ofrecer una revisión rápida de coberturas.
+  - evento: cambio_de_vida
+    disparador: Boda, hijo, auto o casa nueva (dicho por el cliente o visto en redes públicas con consentimiento)
+    accion: Sugerir el ramo que corresponda, sin presión.
+  - evento: siniestro
+    disparador: El cliente menciona un accidente, robo u hospitalización
+    accion: Pasar de inmediato al agente humano. El bot solo comparte el teléfono de siniestros.
+
+contenido:
+  redes: [instagram, tiktok, facebook]
+  pilares:
+    - Mitos y realidades de los seguros
+    - ¿Qué pasa si...? (casos reales anonimizados)
+    - Glosario en 60 segundos (deducible, coaseguro, suma asegurada)
+  avatar: POR CONFIRMAR (tu propio avatar, perfil confiable)
+
+kpis:
+  metas_mensuales:
+    leads: 70
+    cotizaciones: 20
+    polizas: 5
+    tasa_respuesta_whatsapp: 0.40
+    renovacion_anio_1: 0.80

@@ -1,0 +1,117 @@
+# Supuestos a validar con el plantel antes de pasar a piloto: modalidades, costos,
+# número de RVOE, fechas de inscripción, permiso de uso de marca, y si vendes como
+# promotor de la escuela o la escuela es tu cliente (en ese caso, instancia separada).
+
+id: preparatoria-croc
+nombre: Preparatoria CROC
+estado: borrador
+pais: MX
+idioma: es-MX
+zona_horaria_default: America/Mexico_City
+presupuesto_ia_diario_usd: 2
+
+marca:
+  nombre_comercial: Preparatoria CROC   # POR CONFIRMAR el permiso de uso de marca
+  nombre_agente: POR CONFIRMAR
+  tono: Cálido, paciente y motivador. Nunca juzga por qué no terminó la escuela.
+  presentacion: Soy el asistente virtual de la Preparatoria CROC. Te ayudo a conocer las opciones para terminar tu bachillerato y te conecto con un asesor educativo.
+
+producto:
+  que_se_vende: "Inscripción a bachillerato. Modalidades: POR CONFIRMAR."
+  ticket_promedio_mxn: null     # POR CONFIRMAR: inscripción + colegiatura por periodo
+  ciclo_venta_dias: 21
+  ingreso_recurrente: Colegiaturas por periodo y reinscripción hasta la graduación.
+
+cliente_ideal:
+  - segmento: Adulto de 18 a 45 años que trabaja y no terminó la prepa
+    dolor: Sin certificado de bachillerato no me ascienden ni puedo cambiar de trabajo.
+  - segmento: Trabajador de una empresa o sindicato con convenio educativo
+    dolor: Quiero aprovechar el beneficio, pero no sé si me alcanza el tiempo.
+  - segmento: Madre o padre de un adolescente que terminó la secundaria
+    dolor: Busco una opción accesible y con validez oficial para mi hijo.
+
+calificacion:
+  puntaje_minimo_para_agendar: 55
+  preguntas:
+    - id: escolaridad
+      texto: ¿Cuál fue el último grado que terminaste y tienes tu certificado?
+      peso: 30
+    - id: para_quien
+      texto: ¿Es para ti o para alguien de tu familia?
+      peso: 10
+    - id: modalidad
+      texto: ¿Qué te acomoda más, entre semana, fines de semana o en línea?
+      peso: 20
+    - id: ubicacion
+      texto: ¿En qué ciudad o zona vives o trabajas?
+      peso: 15
+    - id: inicio
+      texto: ¿Cuándo te gustaría empezar?
+      peso: 15
+    - id: convenio
+      texto: ¿Trabajas en alguna empresa o sindicato con convenio educativo?
+      peso: 10
+  descartar_si:
+    - Busca un certificado sin cursar las materias.
+  redirigir_si:
+    - No tiene certificado de secundaria → orientarlo al INEA para concluirla y recontactar después.
+    - Busca universidad, no bachillerato → agradecer y cerrar con amabilidad.
+
+cumplimiento:
+  reguladores: [SEP (RVOE o incorporación), PROFECO (publicidad de servicios educativos)]
+  quien_cierra: Asesor educativo o control escolar del plantel.
+  disclaimer: Costos, horarios y fechas sujetos a confirmación del plantel. Estudios con RVOE número POR CONFIRMAR.
+  nunca_decir:
+    - Prometer terminar en menos tiempo del que marca el plan de estudios oficial.
+    - Inventar becas, descuentos o "últimos lugares".
+    - Garantizar la revalidación de estudios previos sin revisión de control escolar.
+  datos_sensibles: [datos de menores de edad, historial académico]
+  consentimientos:
+    - Aviso de privacidad aceptado en el formulario.
+    - Si el prospecto es menor de edad, el contacto se hace con su madre, padre o tutor.
+
+contacto:
+  canal_principal: whatsapp
+  ventana_horaria: {inicio: "09:00", fin: "20:00"}
+  dias: [lun, mar, mie, jue, vie, sab]
+  primer_contacto_max_minutos: 2
+  cadencia_seguimiento_dias: [0, 3, 7, 14]
+  max_intentos: 4
+
+conocimiento:
+  fuentes:
+    - {nombre: Plan de estudios y reglamento del plantel, tipo: pdf, frecuencia: al cambiar}
+    - {nombre: Calendario escolar y fechas de inscripción, tipo: pdf, frecuencia: al cambiar}
+    - {nombre: SEP (avisos sobre RVOE y certificación), tipo: web, frecuencia: semanal}
+  busquedas_youtube:
+    - beneficios de terminar la preparatoria siendo adulto
+    - cómo estudiar y trabajar al mismo tiempo
+
+acompanamiento:
+  - evento: inicio_clases
+    disparador: Una semana antes del inicio del periodo
+    accion: Recordar fecha, horario, plantel y documentos.
+  - evento: riesgo_desercion
+    disparador: Dos faltas seguidas o pago atrasado (dato de control escolar)
+    accion: Mensaje de apoyo y pasar al asesor educativo. Nunca amenazar con la baja.
+  - evento: reinscripcion
+    disparador: 30 y 7 días antes del cierre de reinscripción
+    accion: Recordar y resolver dudas de pago.
+  - evento: graduacion
+    disparador: Fin del plan de estudios
+    accion: Felicitar y pedir referidos (familiares o compañeros de trabajo).
+
+contenido:
+  redes: [facebook, tiktok, instagram]
+  pilares:
+    - Historias de egresados (con su permiso)
+    - Nunca es tarde para terminar la prepa
+    - Cómo estudiar y trabajar al mismo tiempo
+  avatar: POR CONFIRMAR (asesora o asesor educativo de 30 a 45 años, cercano)
+
+kpis:
+  metas_mensuales:
+    leads: 120
+    citas_agendadas: 40
+    inscripciones: 15
+    retencion_por_periodo: 0.85
