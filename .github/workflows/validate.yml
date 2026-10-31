@@ -1,0 +1,21 @@
+name: Validar HTML
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verificar que index.html existe
+        run: test -f index.html
+
+      - name: Validar HTML con htmlhint
+        run: |
+          npm install -g htmlhint
+          htmlhint "**/*.html" --ignore "node_modules/**"

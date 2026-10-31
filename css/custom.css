@@ -1,0 +1,15 @@
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+    text-transform: none;
+}
+
+.reveal pre {
+    width: 100%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.reveal pre code {
+    max-height: 500px;
+    padding: 1em;
+}

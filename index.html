@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Presentación</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" id="theme">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+    <link rel="stylesheet" href="css/custom.css">
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <section>
+                <h1>Mi Presentación</h1>
+                <p>Edita <code>index.html</code> para empezar</p>
+                <aside class="notes">Notas del presentador (tecla S).</aside>
+            </section>
+
+            <section>
+                <h2>Diapositiva 2</h2>
+                <ul>
+                    <li class="fragment">Punto uno</li>
+                    <li class="fragment">Punto dos</li>
+                    <li class="fragment">Punto tres</li>
+                </ul>
+            </section>
+
+            <section>
+                <section>
+                    <h2>Secciones anidadas</h2>
+                    <p>Pulsa flecha abajo</p>
+                </section>
+                <section>
+                    <h3>Sub-slide</h3>
+                    <p>Puedes agrupar temas verticalmente.</p>
+                </section>
+            </section>
+
+            <section>
+                <h2>Código</h2>
+                <pre><code class="language-javascript" data-trim data-line-numbers>
+function saludar(nombre) {
+    return `Hola, ${nombre}!`;
+}
+                </code></pre>
+            </section>
+
+            <section>
+                <h2>¡Gracias!</h2>
+                <p>Preguntas?</p>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/markdown/markdown.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: 'c/t',
+            transition: 'slide',
+            plugins: [RevealNotes, RevealHighlight, RevealMarkdown]
+        });
+    </script>
+</body>
+</html>
